@@ -185,43 +185,43 @@ int main(int argc, char *argv[])
 
     uint64_t frame_count = 0;
     uint64_t interval_frames = 0;
-    uint8_t counter = 0;
     struct timespec ts_last, ts_now;
     clock_gettime(CLOCK_MONOTONIC, &ts_last);
 
+    /* Build frame once — payload is static */
+    struct canfd_frame fd_frame;
+    struct can_frame   cl_frame;
+    size_t frame_size;
+    void  *frame_ptr;
+
+    if (use_fd) {
+        memset(&fd_frame, 0, sizeof(fd_frame));
+        fd_frame.can_id = can_id;
+        fd_frame.len    = (uint8_t)actual_len;
+        fd_frame.flags  = CANFD_BRS;
+        for (int i = 0; i < actual_len; i++)
+            fd_frame.data[i] = (uint8_t)i;
+        frame_ptr  = &fd_frame;
+        frame_size = sizeof(fd_frame);
+    } else {
+        memset(&cl_frame, 0, sizeof(cl_frame));
+        cl_frame.can_id  = can_id;
+        cl_frame.can_dlc = (uint8_t)actual_len;
+        for (int i = 0; i < actual_len; i++)
+            cl_frame.data[i] = (uint8_t)i;
+        frame_ptr  = &cl_frame;
+        frame_size = sizeof(cl_frame);
+    }
+
     while (g_running) {
-        if (use_fd) {
-            struct canfd_frame frame;
-            memset(&frame, 0, sizeof(frame));
-            frame.can_id = can_id;
-            frame.len    = (uint8_t)actual_len;
-            frame.flags  = CANFD_BRS;
-            for (int i = 0; i < actual_len; i++)
-                frame.data[i] = (uint8_t)(counter + i);
-
-            if (write(g_sock, &frame, sizeof(frame)) < 0) {
-                if (errno == EINTR) { g_running = 0; break; }
-                perror("write");
-                break;
-            }
-        } else {
-            struct can_frame frame;
-            memset(&frame, 0, sizeof(frame));
-            frame.can_id  = can_id;
-            frame.can_dlc = (uint8_t)actual_len;
-            for (int i = 0; i < actual_len; i++)
-                frame.data[i] = (uint8_t)(counter + i);
-
-            if (write(g_sock, &frame, sizeof(frame)) < 0) {
-                if (errno == EINTR) { g_running = 0; break; }
-                perror("write");
-                break;
-            }
+        if (write(g_sock, frame_ptr, frame_size) < 0) {
+            if (errno == EINTR) { g_running = 0; break; }
+            perror("write");
+            break;
         }
 
         frame_count++;
         interval_frames++;
-        counter++;
 
         clock_gettime(CLOCK_MONOTONIC, &ts_now);
         double elapsed = (ts_now.tv_sec - ts_last.tv_sec)
