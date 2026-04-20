@@ -57,15 +57,6 @@ static int can_open(const char *iface, int enable_fd)
         return -1;
     }
 
-    if (enable_fd) {
-        int val = 1;
-        if (setsockopt(sock, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &val, sizeof(val)) < 0) {
-            perror("setsockopt CAN_RAW_FD_FRAMES");
-            close(sock);
-            return -1;
-        }
-    }
-
     struct ifreq ifr;
     memset(&ifr, 0, sizeof(ifr));
     strncpy(ifr.ifr_name, iface, IFNAMSIZ - 1);
@@ -75,10 +66,37 @@ static int can_open(const char *iface, int enable_fd)
         return -1;
     }
 
+    int ifindex = ifr.ifr_ifindex;  /* Save before MTU query overwrites it */
+
+    /* Check MTU and enable FD if needed (like cansend does) */
+    if (enable_fd) {
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, iface, IFNAMSIZ - 1);
+        if (ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
+            perror("ioctl SIOCGIFMTU");
+            close(sock);
+            return -1;
+        }
+        if (ifr.ifr_mtu == CANFD_MTU) {
+            int val = 1;
+            if (setsockopt(sock, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &val, sizeof(val)) < 0) {
+                perror("setsockopt CAN_RAW_FD_FRAMES");
+                close(sock);
+                return -1;
+            }
+        } else {
+            fprintf(stderr, "Interface MTU is %d, not CANFD_MTU (%d) - FD mode may not work\n",
+                    ifr.ifr_mtu, CANFD_MTU);
+        }
+    }
+
+    /* Disable default receive filter to save CPU (like cansend does) */
+    setsockopt(sock, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
+
     struct sockaddr_can addr;
     memset(&addr, 0, sizeof(addr));
     addr.can_family  = AF_CAN;
-    addr.can_ifindex = ifr.ifr_ifindex;
+    addr.can_ifindex = ifindex;
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         perror("bind");
         close(sock);
@@ -198,11 +216,13 @@ int main(int argc, char *argv[])
         memset(&fd_frame, 0, sizeof(fd_frame));
         fd_frame.can_id = can_id;
         fd_frame.len    = (uint8_t)actual_len;
-        fd_frame.flags  = CANFD_BRS;
+        fd_frame.flags  = 0;
         for (int i = 0; i < actual_len; i++)
             fd_frame.data[i] = (uint8_t)i;
         frame_ptr  = &fd_frame;
-        frame_size = sizeof(fd_frame);
+        frame_size = CANFD_MTU;
+        fprintf(stderr, "DEBUG: frame_size=%zu, sizeof(canfd_frame)=%zu, flags=0x%02X\n",
+                frame_size, sizeof(fd_frame), fd_frame.flags);
     } else {
         memset(&cl_frame, 0, sizeof(cl_frame));
         cl_frame.can_id  = can_id;
@@ -214,10 +234,14 @@ int main(int argc, char *argv[])
     }
 
     while (g_running) {
-        if (write(g_sock, frame_ptr, frame_size) < 0) {
+        ssize_t nbytes = write(g_sock, frame_ptr, frame_size);
+        if (nbytes < 0) {
             if (errno == EINTR) { g_running = 0; break; }
             perror("write");
             break;
+        }
+        if (nbytes != (ssize_t)frame_size) {
+            fprintf(stderr, "Incomplete write: %zd of %zu bytes\n", nbytes, frame_size);
         }
 
         frame_count++;
