@@ -40,7 +40,6 @@ struct f81601_pci_card {
 
 static const struct pci_device_id f81601_pci_tbl[] = {
 	{ PCI_DEVICE(0x1c29, 0x1703) },
-	{ PCI_DEVICE(0x1c29, 0x2004) },
 	{ /* sentinel */ },
 };
 
