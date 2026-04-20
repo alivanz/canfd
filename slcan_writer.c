@@ -11,7 +11,7 @@
  *   9→12  A→16  B→20  C→24  D→32  E→48  F→64
  *
  * Usage:
- *   ./slcan_writer --port /dev/ttyUSB0 [--fd] [--id 0x100] [--len 8] [--baud 115200] [--ext] [--rate 0]
+ *   ./slcan_writer --port /dev/ttyUSB0 [--fd] [--id 0x100] [--len 8] [--baud 115200] [--bitrate 500k] [--dbitrate 5M] [--ext] [--rate 0]
  *
  * Compile:
  *   gcc -O2 -Wall -o slcan_writer slcan_writer.c
@@ -113,6 +113,46 @@ static speed_t baud_to_speed(int baud)
     }
 }
 
+static int parse_bitrate(const char *s)
+{
+    char *end;
+    double v = strtod(s, &end);
+    if (end == s) return -1;
+    if (*end == 'k' || *end == 'K') v *= 1000;
+    else if (*end == 'M' || *end == 'm') v *= 1000000;
+    return (int)v;
+}
+
+/* Standard SLCAN S0-S8 nominal bitrate commands */
+static const char *bitrate_to_s_cmd(int bitrate)
+{
+    switch (bitrate) {
+    case 10000:   return "S0\r";
+    case 20000:   return "S1\r";
+    case 50000:   return "S2\r";
+    case 100000:  return "S3\r";
+    case 125000:  return "S4\r";
+    case 250000:  return "S5\r";
+    case 500000:  return "S6\r";
+    case 800000:  return "S7\r";
+    case 1000000: return "S8\r";
+    default:      return NULL;
+    }
+}
+
+/* CAN FD data bitrate Y commands (CANable 2.0 / slcan firmware) */
+static const char *dbitrate_to_y_cmd(int bitrate)
+{
+    switch (bitrate) {
+    case 1000000: return "Y0\r";
+    case 2000000: return "Y1\r";
+    case 4000000: return "Y2\r";
+    case 5000000: return "Y3\r";
+    case 8000000: return "Y4\r";
+    default:      return NULL;
+    }
+}
+
 static int tty_open(const char *port, int baud)
 {
     int fd = open(port, O_RDWR | O_NOCTTY | O_NONBLOCK);
@@ -170,14 +210,16 @@ static void usage(const char *prog)
         "Usage: %s --port <device> [options]\n"
         "\n"
         "Options:\n"
-        "  --port <dev>   Serial port (e.g. /dev/ttyUSB0)  [required]\n"
-        "  --fd           Use CAN FD frames (default: classic CAN)\n"
-        "  --ext          Use extended 29-bit ID (default: standard 11-bit)\n"
-        "  --id <hex>     Arbitration ID in hex (default: 100)\n"
-        "  --len <n>      Payload length in bytes (default: 8)\n"
-        "  --baud <rate>  Serial baud rate (default: 115200)\n"
-        "  --rate <us>    Interval between frames in microseconds (default: 0 = full speed)\n"
-        "  -h, --help     Show this help\n",
+        "  --port <dev>      Serial port (e.g. /dev/ttyUSB0)  [required]\n"
+        "  --fd              Use CAN FD frames (default: classic CAN)\n"
+        "  --ext             Use extended 29-bit ID (default: standard 11-bit)\n"
+        "  --id <hex>        Arbitration ID in hex (default: 100)\n"
+        "  --len <n>         Payload length in bytes (default: 8)\n"
+        "  --baud <rate>     Serial baud rate (default: 115200)\n"
+        "  --bitrate <rate>  CAN nominal bitrate: 10k/20k/50k/100k/125k/250k/500k/800k/1M (default: 1M)\n"
+        "  --dbitrate <rate> CAN FD data bitrate: 1M/2M/4M/5M/8M (default: none)\n"
+        "  --rate <us>       Interval between frames in microseconds (default: 0 = full speed)\n"
+        "  -h, --help        Show this help\n",
         prog);
 }
 
@@ -189,22 +231,26 @@ int main(int argc, char *argv[])
     uint32_t arb_id = 0x100;
     int payload_len = 8;
     int baud = 115200;
+    int bitrate = 1000000;
+    int dbitrate = -1;
     int rate_us = 0;
 
     static struct option long_opts[] = {
-        {"port", required_argument, NULL, 'p'},
-        {"fd",   no_argument,       NULL, 'f'},
-        {"ext",  no_argument,       NULL, 'e'},
-        {"id",   required_argument, NULL, 'i'},
-        {"len",  required_argument, NULL, 'l'},
-        {"baud", required_argument, NULL, 'b'},
-        {"rate", required_argument, NULL, 'r'},
-        {"help", no_argument,       NULL, 'h'},
+        {"port",     required_argument, NULL, 'p'},
+        {"fd",       no_argument,       NULL, 'f'},
+        {"ext",      no_argument,       NULL, 'e'},
+        {"id",       required_argument, NULL, 'i'},
+        {"len",      required_argument, NULL, 'l'},
+        {"baud",     required_argument, NULL, 'b'},
+        {"bitrate",  required_argument, NULL, 'B'},
+        {"dbitrate", required_argument, NULL, 'D'},
+        {"rate",     required_argument, NULL, 'r'},
+        {"help",     no_argument,       NULL, 'h'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "p:fei:l:b:r:h", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:fei:l:b:B:D:r:h", long_opts, NULL)) != -1) {
         switch (opt) {
         case 'p': port = optarg; break;
         case 'f': use_fd = 1; break;
@@ -212,6 +258,8 @@ int main(int argc, char *argv[])
         case 'i': arb_id = (uint32_t)strtoul(optarg, NULL, 16); break;
         case 'l': payload_len = atoi(optarg); break;
         case 'b': baud = atoi(optarg); break;
+        case 'B': bitrate = parse_bitrate(optarg); break;
+        case 'D': dbitrate = parse_bitrate(optarg); break;
         case 'r': rate_us = atoi(optarg); break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 1;
@@ -247,6 +295,9 @@ int main(int argc, char *argv[])
             use_ext ? "(29-bit)" : "(11-bit)");
     fprintf(stderr, "ID:      0x%X\n", arb_id);
     fprintf(stderr, "DLC:     %d (0x%X) → %d bytes\n", dlc, dlc, actual_len);
+    fprintf(stderr, "Bitrate: %d\n", bitrate);
+    if (dbitrate > 0)
+        fprintf(stderr, "DbitRate:%d\n", dbitrate);
     fprintf(stderr, "Rate:    %s\n", rate_us > 0 ? "" : "full speed (no delay)");
     if (rate_us > 0) fprintf(stderr, "         %d us/frame\n", rate_us);
 
@@ -262,9 +313,21 @@ int main(int argc, char *argv[])
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
 
-    /* Close any previous session, open channel */
+    /* Close any previous session, configure bitrate, open channel */
     slcan_send_cmd(g_fd, "C\r");
-    slcan_send_cmd(g_fd, "S6\r");  /* 500 kbps nominal */
+    const char *s_cmd = bitrate_to_s_cmd(bitrate);
+    if (s_cmd) {
+        slcan_send_cmd(g_fd, s_cmd);
+    } else {
+        fprintf(stderr, "Warning: unsupported bitrate %d, skipping S command\n", bitrate);
+    }
+    if (dbitrate > 0) {
+        const char *y_cmd = dbitrate_to_y_cmd(dbitrate);
+        if (y_cmd)
+            slcan_send_cmd(g_fd, y_cmd);
+        else
+            fprintf(stderr, "Warning: unsupported dbitrate %d, skipping Y command\n", dbitrate);
+    }
     slcan_send_cmd(g_fd, "O\r");
 
     fprintf(stderr, "Sending frames... (Ctrl+C to stop)\n");
