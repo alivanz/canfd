@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -31,6 +32,7 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
+#include "cants.h"
 
 static volatile sig_atomic_t g_running = 1;
 static int g_fd = -1;
@@ -176,8 +178,9 @@ static int hex_val(char c)
 /*
  * Parse one SLCAN frame line (without trailing \r).
  * Returns the payload byte count, or -1 if not a data frame.
+ * If ts_out is non-NULL, decodes first CANTS_SIZE bytes of payload into it.
  */
-static int parse_frame(const char *line, int len, int verbose)
+static int parse_frame(const char *line, int len, int verbose, uint8_t *ts_out)
 {
     if (len < 2) return -1;
 
@@ -232,16 +235,24 @@ static int parse_frame(const char *line, int len, int verbose)
         data_bytes = (len - pos) / 2;
     }
 
+    /* Decode payload bytes for timestamp or verbose output */
+    int available = (len - pos) / 2;
+    if (available > data_bytes) available = data_bytes;
+
+    if (ts_out && available >= CANTS_SIZE) {
+        for (int i = 0; i < CANTS_SIZE; i++) {
+            int hi = hex_val(line[pos + i * 2]);
+            int lo = hex_val(line[pos + i * 2 + 1]);
+            ts_out[i] = (hi >= 0 && lo >= 0) ? (uint8_t)((hi << 4) | lo) : 0;
+        }
+    }
+
     if (verbose) {
         printf("%s %s ID=0x%0*X DLC=%d (%d bytes) ",
                is_fd ? "FD" : "  ",
                is_ext ? "EXT" : "STD",
                id_chars, arb_id,
                dlc, data_bytes);
-
-        /* Print payload hex */
-        int available = (len - pos) / 2;
-        if (available > data_bytes) available = data_bytes;
         for (int i = 0; i < available; i++) {
             int hi = hex_val(line[pos + i * 2]);
             int lo = hex_val(line[pos + i * 2 + 1]);
@@ -278,20 +289,22 @@ int main(int argc, char *argv[])
     int bitrate = 1000000;
     int dbitrate = -1;
     int verbose = 0;
+    int use_timestamp = 0;
 
     static struct option long_opts[] = {
-        {"port",     required_argument, NULL, 'p'},
-        {"fd",       no_argument,       NULL, 'f'},
-        {"baud",     required_argument, NULL, 'b'},
-        {"bitrate",  required_argument, NULL, 'B'},
-        {"dbitrate", required_argument, NULL, 'D'},
-        {"verbose",  no_argument,       NULL, 'v'},
-        {"help",     no_argument,       NULL, 'h'},
+        {"port",      required_argument, NULL, 'p'},
+        {"fd",        no_argument,       NULL, 'f'},
+        {"baud",      required_argument, NULL, 'b'},
+        {"bitrate",   required_argument, NULL, 'B'},
+        {"dbitrate",  required_argument, NULL, 'D'},
+        {"verbose",   no_argument,       NULL, 'v'},
+        {"timestamp", no_argument,       NULL, 't'},
+        {"help",      no_argument,       NULL, 'h'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "p:fb:B:D:vh", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:fb:B:D:vth", long_opts, NULL)) != -1) {
         switch (opt) {
         case 'p': port = optarg; break;
         case 'f': expect_fd = 1; break;
@@ -299,6 +312,7 @@ int main(int argc, char *argv[])
         case 'B': bitrate = parse_bitrate(optarg); break;
         case 'D': dbitrate = parse_bitrate(optarg); break;
         case 'v': verbose = 1; break;
+        case 't': use_timestamp = 1; break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 1;
         }
@@ -315,6 +329,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Bitrate: %d\n", bitrate);
     if (dbitrate > 0)
         fprintf(stderr, "DbitRate:%d\n", dbitrate);
+    if (use_timestamp) fprintf(stderr, "Timestamp: enabled\n");
 
     /* Open serial port */
     g_fd = tty_open(port, baud);
@@ -357,6 +372,11 @@ int main(int argc, char *argv[])
     uint64_t interval_packets = 0;
     uint64_t interval_bytes = 0;
 
+    int64_t lat_min = INT64_MAX;
+    int64_t lat_max = INT64_MIN;
+    double  lat_sum = 0;
+    uint64_t lat_count = 0;
+
     struct timespec ts_last, ts_now;
     clock_gettime(CLOCK_MONOTONIC, &ts_last);
 
@@ -392,8 +412,17 @@ int main(int argc, char *argv[])
                 if (c == '\r' || c == '\n') {
                     if (linepos > 0) {
                         linebuf[linepos] = '\0';
-                        int payload = parse_frame(linebuf, linepos, verbose);
+                        uint8_t ts_bytes[CANTS_SIZE];
+                        int payload = parse_frame(linebuf, linepos, verbose,
+                                                  use_timestamp ? ts_bytes : NULL);
                         if (payload >= 0) {
+                            if (use_timestamp && payload >= CANTS_SIZE) {
+                                int64_t lat = cants_decode(ts_bytes);
+                                if (lat < lat_min) lat_min = lat;
+                                if (lat > lat_max) lat_max = lat;
+                                lat_sum += lat;
+                                lat_count++;
+                            }
                             interval_packets++;
                             interval_bytes += payload;
                             total_packets++;
@@ -421,6 +450,18 @@ int main(int argc, char *argv[])
                    (unsigned long)total_packets, pps, bps);
             if (bps > 1024)
                 printf("  (%.2f KB/s)", bps / 1024.0);
+
+            if (use_timestamp && lat_count > 0) {
+                double avg_us = (lat_sum / lat_count) / 1000.0;
+                double min_us = lat_min / 1000.0;
+                double max_us = lat_max / 1000.0;
+                printf("  | latency min/avg/max: %.1f/%.1f/%.1f us", min_us, avg_us, max_us);
+                lat_min = INT64_MAX;
+                lat_max = INT64_MIN;
+                lat_sum = 0;
+                lat_count = 0;
+            }
+
             printf("\n");
             fflush(stdout);
 

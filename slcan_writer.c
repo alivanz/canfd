@@ -29,6 +29,7 @@
 #include <getopt.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include "cants.h"
 
 static volatile sig_atomic_t g_running = 1;
 static int g_fd = -1;
@@ -219,6 +220,7 @@ static void usage(const char *prog)
         "  --bitrate <rate>  CAN nominal bitrate: 10k/20k/50k/100k/125k/250k/500k/800k/1M (default: 1M)\n"
         "  --dbitrate <rate> CAN FD data bitrate: 1M/2M/4M/5M/8M (default: none)\n"
         "  --rate <us>       Interval between frames in microseconds (default: 0 = full speed)\n"
+        "  --timestamp       Embed send timestamp in payload (min 8 bytes, for latency testing)\n"
         "  -h, --help        Show this help\n",
         prog);
 }
@@ -228,6 +230,7 @@ int main(int argc, char *argv[])
     const char *port = NULL;
     int use_fd = 0;
     int use_ext = 0;
+    int use_timestamp = 0;
     uint32_t arb_id = 0x100;
     int payload_len = 8;
     int baud = 115200;
@@ -236,21 +239,22 @@ int main(int argc, char *argv[])
     int rate_us = 0;
 
     static struct option long_opts[] = {
-        {"port",     required_argument, NULL, 'p'},
-        {"fd",       no_argument,       NULL, 'f'},
-        {"ext",      no_argument,       NULL, 'e'},
-        {"id",       required_argument, NULL, 'i'},
-        {"len",      required_argument, NULL, 'l'},
-        {"baud",     required_argument, NULL, 'b'},
-        {"bitrate",  required_argument, NULL, 'B'},
-        {"dbitrate", required_argument, NULL, 'D'},
-        {"rate",     required_argument, NULL, 'r'},
-        {"help",     no_argument,       NULL, 'h'},
+        {"port",      required_argument, NULL, 'p'},
+        {"fd",        no_argument,       NULL, 'f'},
+        {"ext",       no_argument,       NULL, 'e'},
+        {"id",        required_argument, NULL, 'i'},
+        {"len",       required_argument, NULL, 'l'},
+        {"baud",      required_argument, NULL, 'b'},
+        {"bitrate",   required_argument, NULL, 'B'},
+        {"dbitrate",  required_argument, NULL, 'D'},
+        {"rate",      required_argument, NULL, 'r'},
+        {"timestamp", no_argument,       NULL, 't'},
+        {"help",      no_argument,       NULL, 'h'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "p:fei:l:b:B:D:r:h", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:fei:l:b:B:D:r:th", long_opts, NULL)) != -1) {
         switch (opt) {
         case 'p': port = optarg; break;
         case 'f': use_fd = 1; break;
@@ -261,6 +265,7 @@ int main(int argc, char *argv[])
         case 'B': bitrate = parse_bitrate(optarg); break;
         case 'D': dbitrate = parse_bitrate(optarg); break;
         case 'r': rate_us = atoi(optarg); break;
+        case 't': use_timestamp = 1; break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 1;
         }
@@ -274,6 +279,8 @@ int main(int argc, char *argv[])
 
     /* Clamp payload length */
     int max_len = use_fd ? 64 : 8;
+    if (use_timestamp && payload_len < CANTS_SIZE)
+        payload_len = CANTS_SIZE;
     if (payload_len < 0) payload_len = 0;
     if (payload_len > max_len) payload_len = max_len;
 
@@ -300,6 +307,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "DbitRate:%d\n", dbitrate);
     fprintf(stderr, "Rate:    %s\n", rate_us > 0 ? "" : "full speed (no delay)");
     if (rate_us > 0) fprintf(stderr, "         %d us/frame\n", rate_us);
+    if (use_timestamp) fprintf(stderr, "Timestamp: enabled\n");
 
     /* Open serial port */
     g_fd = tty_open(port, baud);
@@ -368,9 +376,17 @@ int main(int argc, char *argv[])
         /* DLC as single hex char */
         buf[pos++] = (dlc < 10) ? ('0' + dlc) : ('A' + dlc - 10);
 
-        /* Payload: fill with incrementing counter */
-        for (int i = 0; i < actual_len; i++) {
-            pos += sprintf(&buf[pos], "%02X", (uint8_t)(counter + i));
+        /* Payload */
+        if (use_timestamp) {
+            uint8_t ts_bytes[CANTS_SIZE];
+            cants_encode(ts_bytes);
+            for (int i = 0; i < CANTS_SIZE; i++)
+                pos += sprintf(&buf[pos], "%02X", ts_bytes[i]);
+            for (int i = CANTS_SIZE; i < actual_len; i++)
+                pos += sprintf(&buf[pos], "%02X", (uint8_t)(counter + i));
+        } else {
+            for (int i = 0; i < actual_len; i++)
+                pos += sprintf(&buf[pos], "%02X", (uint8_t)(counter + i));
         }
 
         buf[pos++] = '\r';
