@@ -114,6 +114,8 @@ static void usage(const char *prog)
         "Options:\n"
         "  --iface <dev>  CAN interface (e.g. can0, vcan0)  [required]\n"
         "  --fd           Use CAN FD frames (default: classic CAN)\n"
+        "  --brs          Enable Bit Rate Switch (use data bitrate for payload)\n"
+        "  --esi          Enable Error State Indicator\n"
         "  --ext          Use extended 29-bit ID (default: standard 11-bit)\n"
         "  --id <hex>     Arbitration ID in hex (default: 100)\n"
         "  --len <n>      Payload length in bytes (default: 8)\n"
@@ -126,6 +128,8 @@ int main(int argc, char *argv[])
 {
     const char *iface = NULL;
     int use_fd = 0;
+    int use_brs = 0;
+    int use_esi = 0;
     int use_ext = 0;
     uint32_t arb_id = 0x100;
     int payload_len = 8;
@@ -134,6 +138,8 @@ int main(int argc, char *argv[])
     static struct option long_opts[] = {
         {"iface", required_argument, NULL, 'n'},
         {"fd",    no_argument,       NULL, 'f'},
+        {"brs",   no_argument,       NULL, 'b'},
+        {"esi",   no_argument,       NULL, 's'},
         {"ext",   no_argument,       NULL, 'e'},
         {"id",    required_argument, NULL, 'i'},
         {"len",   required_argument, NULL, 'l'},
@@ -143,10 +149,12 @@ int main(int argc, char *argv[])
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "n:fei:l:r:h", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "n:fbsei:l:r:h", long_opts, NULL)) != -1) {
         switch (opt) {
         case 'n': iface = optarg; break;
         case 'f': use_fd = 1; break;
+        case 'b': use_brs = 1; break;
+        case 's': use_esi = 1; break;
         case 'e': use_ext = 1; break;
         case 'i': arb_id = (uint32_t)strtoul(optarg, NULL, 16); break;
         case 'l': payload_len = atoi(optarg); break;
@@ -217,6 +225,8 @@ int main(int argc, char *argv[])
         fd_frame.can_id = can_id;
         fd_frame.len    = (uint8_t)actual_len;
         fd_frame.flags  = 0;
+        if (use_brs) fd_frame.flags |= CANFD_BRS;
+        if (use_esi) fd_frame.flags |= CANFD_ESI;
         for (int i = 0; i < actual_len; i++)
             fd_frame.data[i] = (uint8_t)i;
         frame_ptr  = &fd_frame;
