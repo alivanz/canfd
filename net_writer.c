@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <signal.h>
@@ -23,6 +24,7 @@
 #include <sys/ioctl.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include "cants.h"
 
 static volatile sig_atomic_t g_running = 1;
 static int g_sock = -1;
@@ -120,6 +122,7 @@ static void usage(const char *prog)
         "  --id <hex>     Arbitration ID in hex (default: 100)\n"
         "  --len <n>      Payload length in bytes (default: 8)\n"
         "  --rate <us>    Interval between frames in microseconds (default: 0 = full speed)\n"
+        "  --timestamp    Embed send timestamp in payload (min 8 bytes, for latency testing)\n"
         "  -h, --help     Show this help\n",
         prog);
 }
@@ -131,25 +134,27 @@ int main(int argc, char *argv[])
     int use_brs = 0;
     int use_esi = 0;
     int use_ext = 0;
+    int use_timestamp = 0;
     uint32_t arb_id = 0x100;
     int payload_len = 8;
     int rate_us = 0;
 
     static struct option long_opts[] = {
-        {"iface", required_argument, NULL, 'n'},
-        {"fd",    no_argument,       NULL, 'f'},
-        {"brs",   no_argument,       NULL, 'b'},
-        {"esi",   no_argument,       NULL, 's'},
-        {"ext",   no_argument,       NULL, 'e'},
-        {"id",    required_argument, NULL, 'i'},
-        {"len",   required_argument, NULL, 'l'},
-        {"rate",  required_argument, NULL, 'r'},
-        {"help",  no_argument,       NULL, 'h'},
+        {"iface",     required_argument, NULL, 'n'},
+        {"fd",        no_argument,       NULL, 'f'},
+        {"brs",       no_argument,       NULL, 'b'},
+        {"esi",       no_argument,       NULL, 's'},
+        {"ext",       no_argument,       NULL, 'e'},
+        {"id",        required_argument, NULL, 'i'},
+        {"len",       required_argument, NULL, 'l'},
+        {"rate",      required_argument, NULL, 'r'},
+        {"timestamp", no_argument,       NULL, 't'},
+        {"help",      no_argument,       NULL, 'h'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "n:fbsei:l:r:h", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "n:fbsei:l:r:th", long_opts, NULL)) != -1) {
         switch (opt) {
         case 'n': iface = optarg; break;
         case 'f': use_fd = 1; break;
@@ -159,6 +164,7 @@ int main(int argc, char *argv[])
         case 'i': arb_id = (uint32_t)strtoul(optarg, NULL, 16); break;
         case 'l': payload_len = atoi(optarg); break;
         case 'r': rate_us = atoi(optarg); break;
+        case 't': use_timestamp = 1; break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 1;
         }
@@ -172,6 +178,8 @@ int main(int argc, char *argv[])
 
     /* Clamp payload length */
     int max_len = use_fd ? 64 : 8;
+    if (use_timestamp && payload_len < CANTS_SIZE)
+        payload_len = CANTS_SIZE;
     if (payload_len < 0) payload_len = 0;
     if (payload_len > max_len) payload_len = max_len;
 
@@ -196,6 +204,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Length:    %d bytes\n", actual_len);
     fprintf(stderr, "Rate:      %s\n", rate_us > 0 ? "" : "full speed (no delay)");
     if (rate_us > 0) fprintf(stderr, "           %d us/frame\n", rate_us);
+    if (use_timestamp) fprintf(stderr, "Timestamp: enabled\n");
 
     g_sock = can_open(iface, use_fd);
     if (g_sock < 0)
@@ -244,6 +253,9 @@ int main(int argc, char *argv[])
     }
 
     while (g_running) {
+        if (use_timestamp)
+            cants_encode((uint8_t *)frame_ptr + (use_fd ? offsetof(struct canfd_frame, data) : offsetof(struct can_frame, data)));
+
         ssize_t nbytes = write(g_sock, frame_ptr, frame_size);
         if (nbytes < 0) {
             if (errno == EINTR) { g_running = 0; break; }

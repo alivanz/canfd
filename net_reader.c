@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
@@ -24,6 +25,7 @@
 #include <sys/select.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include "cants.h"
 
 static volatile sig_atomic_t g_running = 1;
 static int g_sock = -1;
@@ -91,21 +93,24 @@ int main(int argc, char *argv[])
     const char *iface = NULL;
     int enable_fd = 0;
     int verbose = 0;
+    int use_timestamp = 0;
 
     static struct option long_opts[] = {
-        {"iface",   required_argument, NULL, 'n'},
-        {"fd",      no_argument,       NULL, 'f'},
-        {"verbose", no_argument,       NULL, 'v'},
-        {"help",    no_argument,       NULL, 'h'},
+        {"iface",     required_argument, NULL, 'n'},
+        {"fd",        no_argument,       NULL, 'f'},
+        {"verbose",   no_argument,       NULL, 'v'},
+        {"timestamp", no_argument,       NULL, 't'},
+        {"help",      no_argument,       NULL, 'h'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "n:fvh", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "n:fvth", long_opts, NULL)) != -1) {
         switch (opt) {
         case 'n': iface = optarg; break;
         case 'f': enable_fd = 1; break;
         case 'v': verbose = 1; break;
+        case 't': use_timestamp = 1; break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 1;
         }
@@ -119,6 +124,7 @@ int main(int argc, char *argv[])
 
     fprintf(stderr, "Interface: %s\n", iface);
     fprintf(stderr, "Mode:      %s\n", enable_fd ? "CAN FD" : "CAN");
+    if (use_timestamp) fprintf(stderr, "Timestamp: enabled\n");
 
     g_sock = can_open(iface, enable_fd);
     if (g_sock < 0)
@@ -136,6 +142,11 @@ int main(int argc, char *argv[])
     uint64_t total_bytes = 0;
     uint64_t interval_packets = 0;
     uint64_t interval_bytes = 0;
+
+    int64_t lat_min = INT64_MAX;
+    int64_t lat_max = INT64_MIN;
+    double  lat_sum = 0;
+    uint64_t lat_count = 0;
 
     struct timespec ts_last, ts_now;
     clock_gettime(CLOCK_MONOTONIC, &ts_last);
@@ -174,6 +185,14 @@ int main(int argc, char *argv[])
                 id     = frame.can_id & (is_ext ? CAN_EFF_MASK : CAN_SFF_MASK);
                 len    = frame.len;
 
+                if (use_timestamp && len >= CANTS_SIZE) {
+                    int64_t lat = cants_decode(frame.data);
+                    if (lat < lat_min) lat_min = lat;
+                    if (lat > lat_max) lat_max = lat;
+                    lat_sum += lat;
+                    lat_count++;
+                }
+
                 if (verbose) {
                     printf("FD %s ID=0x%0*X len=%d ",
                            is_ext ? "EXT" : "STD",
@@ -195,6 +214,14 @@ int main(int argc, char *argv[])
                 is_ext = !!(frame.can_id & CAN_EFF_FLAG);
                 id     = frame.can_id & (is_ext ? CAN_EFF_MASK : CAN_SFF_MASK);
                 len    = frame.can_dlc;
+
+                if (use_timestamp && len >= CANTS_SIZE) {
+                    int64_t lat = cants_decode(frame.data);
+                    if (lat < lat_min) lat_min = lat;
+                    if (lat > lat_max) lat_max = lat;
+                    lat_sum += lat;
+                    lat_count++;
+                }
 
                 if (verbose) {
                     printf("   %s ID=0x%0*X len=%d ",
@@ -224,6 +251,18 @@ int main(int argc, char *argv[])
                    (unsigned long)total_packets, pps, bps);
             if (bps > 1024)
                 printf("  (%.2f KB/s)", bps / 1024.0);
+
+            if (use_timestamp && lat_count > 0) {
+                double avg_us = (lat_sum / lat_count) / 1000.0;
+                double min_us = lat_min / 1000.0;
+                double max_us = lat_max / 1000.0;
+                printf("  | latency min/avg/max: %.1f/%.1f/%.1f us", min_us, avg_us, max_us);
+                lat_min = INT64_MAX;
+                lat_max = INT64_MIN;
+                lat_sum = 0;
+                lat_count = 0;
+            }
+
             printf("\n");
             fflush(stdout);
 
