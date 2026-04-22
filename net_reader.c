@@ -143,10 +143,11 @@ int main(int argc, char *argv[])
     uint64_t interval_packets = 0;
     uint64_t interval_bytes = 0;
 
-    int64_t lat_min = INT64_MAX;
-    int64_t lat_max = INT64_MIN;
-    double  lat_sum = 0;
-    uint64_t lat_count = 0;
+    CantsStats lat_stats = {0};
+    if (use_timestamp && cants_stats_init(&lat_stats) < 0) {
+        fprintf(stderr, "Failed to allocate latency buffer\n");
+        return 1;
+    }
 
     struct timespec ts_last, ts_now;
     clock_gettime(CLOCK_MONOTONIC, &ts_last);
@@ -185,13 +186,8 @@ int main(int argc, char *argv[])
                 id     = frame.can_id & (is_ext ? CAN_EFF_MASK : CAN_SFF_MASK);
                 len    = frame.len;
 
-                if (use_timestamp && len >= CANTS_SIZE) {
-                    int64_t lat = cants_decode(frame.data);
-                    if (lat < lat_min) lat_min = lat;
-                    if (lat > lat_max) lat_max = lat;
-                    lat_sum += lat;
-                    lat_count++;
-                }
+                if (use_timestamp && len >= CANTS_SIZE)
+                    cants_stats_add(&lat_stats, cants_decode(frame.data));
 
                 if (verbose) {
                     printf("FD %s ID=0x%0*X len=%d ",
@@ -215,13 +211,8 @@ int main(int argc, char *argv[])
                 id     = frame.can_id & (is_ext ? CAN_EFF_MASK : CAN_SFF_MASK);
                 len    = frame.can_dlc;
 
-                if (use_timestamp && len >= CANTS_SIZE) {
-                    int64_t lat = cants_decode(frame.data);
-                    if (lat < lat_min) lat_min = lat;
-                    if (lat > lat_max) lat_max = lat;
-                    lat_sum += lat;
-                    lat_count++;
-                }
+                if (use_timestamp && len >= CANTS_SIZE)
+                    cants_stats_add(&lat_stats, cants_decode(frame.data));
 
                 if (verbose) {
                     printf("   %s ID=0x%0*X len=%d ",
@@ -252,16 +243,8 @@ int main(int argc, char *argv[])
             if (bps > 1024)
                 printf("  (%.2f KB/s)", bps / 1024.0);
 
-            if (use_timestamp && lat_count > 0) {
-                double avg_us = (lat_sum / lat_count) / 1000.0;
-                double min_us = lat_min / 1000.0;
-                double max_us = lat_max / 1000.0;
-                printf("  | latency min/avg/max: %.1f/%.1f/%.1f us", min_us, avg_us, max_us);
-                lat_min = INT64_MAX;
-                lat_max = INT64_MIN;
-                lat_sum = 0;
-                lat_count = 0;
-            }
+            if (use_timestamp)
+                cants_stats_print(&lat_stats);
 
             printf("\n");
             fflush(stdout);
