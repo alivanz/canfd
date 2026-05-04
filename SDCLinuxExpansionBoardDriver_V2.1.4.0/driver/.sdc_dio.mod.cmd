@@ -1,1 +1,0 @@
-cmd_/home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/sdc_dio.mod := { echo  /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/sdc_dio.o;  echo; } > /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/sdc_dio.mod

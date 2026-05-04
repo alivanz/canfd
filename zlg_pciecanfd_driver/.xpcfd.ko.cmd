@@ -1,1 +1,0 @@
-cmd_/home/nvidia/canfd/zlg_pciecanfd_driver/xpcfd.ko := ld -r  -EL  -maarch64elf -z noexecstack   --build-id=sha1  -T scripts/module.lds -o /home/nvidia/canfd/zlg_pciecanfd_driver/xpcfd.ko /home/nvidia/canfd/zlg_pciecanfd_driver/xpcfd.o /home/nvidia/canfd/zlg_pciecanfd_driver/xpcfd.mod.o;  true

@@ -1,1 +1,0 @@
-cmd_/home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/8250_sdc.mod := { echo  /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/8250_sdc.o;  echo; } > /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/8250_sdc.mod

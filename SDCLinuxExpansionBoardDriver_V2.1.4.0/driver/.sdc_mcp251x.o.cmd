@@ -1,1 +1,0 @@
-cmd_/home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/sdc_mcp251x.o := ld  -EL  -maarch64elf -z noexecstack     -r -o /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/sdc_mcp251x.o /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/mcp251x/mcp251x.o

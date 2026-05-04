@@ -1,1 +1,0 @@
-cmd_/home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/can_sdc.o := ld  -EL  -maarch64elf -z noexecstack     -r -o /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/can_sdc.o /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/sdccanfd/sdc_canfd.o

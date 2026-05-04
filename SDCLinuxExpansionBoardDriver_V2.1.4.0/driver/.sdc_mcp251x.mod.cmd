@@ -1,1 +1,0 @@
-cmd_/home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/sdc_mcp251x.mod := { echo  /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/mcp251x/mcp251x.o;  echo; } > /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/sdc_mcp251x.mod

@@ -16,6 +16,7 @@ test_single_frame
 *.mod.o
 *.a
 *.so*
+*.cmd
 modules.order
 Module.symvers
 .tmp_versions/

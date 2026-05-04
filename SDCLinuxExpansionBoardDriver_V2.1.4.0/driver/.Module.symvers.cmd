@@ -1,1 +1,0 @@
-cmd_/home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/Module.symvers := sed 's/ko$$/o/' /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/modules.order | scripts/mod/modpost -m  -E  -o /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/Module.symvers -e -i Module.symvers   -T -
