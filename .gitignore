@@ -1,0 +1,34 @@
+# Compiled binaries
+net_reader
+net_writer
+sange_can
+sange_reader
+sange_writer
+slcan_reader
+slcan_writer
+test_single_frame
+
+# Kernel module build artifacts
+*.o
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.a
+*.so*
+modules.order
+Module.symvers
+.tmp_versions/
+.cache.*
+modules.livepatch
+
+# Driver build output dirs
+obj/
+
+# Zip archives
+*.zip
+
+# Docs and vendor SDKs (large, not needed for building)
+PCIe_CAN_FD_docs/
+sange_sdk/
+anyfbus_driver/
