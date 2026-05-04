@@ -1,0 +1,382 @@
+#!/bin/bash
+: '
+Script for RHEL9.5 install or uninstall driver package
+Set ENABLE_X=1 to enable, 0 to disable some section if needed.
+'
+
+ENABLE_DRIVER=1
+ENABLE_TOOLS=1
+ENABLE_LIB=1
+ENABLE_CONFIGSCRIPT=1
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
+function process_driver_install()
+{
+	eval "cd driver" $REDIRECT
+	if [ $? != 0 ]; then
+		return 1
+	fi
+
+	eval "patch -p1 -f -s --dry-run < ../patch/RHEL_9.5.patch" $REDIRECT
+	if [ $? == 0 ]; then
+		eval "patch -p1 -t  < ../patch/RHEL_9.5.patch" $REDIRECT
+	fi
+
+	eval "make clean" $REDIRECT
+	eval "make" $REDIRECT
+	if [ $? != 0 ]; then
+		return 2
+	fi
+
+	eval "sudo make install" $REDIRECT
+	if [ $? != 0 ]; then
+		return 3
+	fi
+
+	cd ..
+
+	return 0
+}
+
+function process_driver_uninstall()
+{
+	eval "cd driver" $REDIRECT
+	if [ $? != 0 ]; then
+		return 1
+	fi
+
+	eval "make clean" $REDIRECT
+	if [ $? != 0 ]; then
+		return 2
+	fi
+
+	eval "sudo make uninstall" $REDIRECT
+	if [ $? != 0 ]; then
+		return 3
+	fi
+
+	eval "patch -p1 -R -f -s --dry-run < ../patch/RHEL_9.5.patch" $REDIRECT
+	if [ $? == 0 ]; then
+		eval "patch -p1 -R -t  < ../patch/RHEL_9.5.patch" $REDIRECT
+	fi
+
+	cd ..
+
+	return 0
+}
+
+function process_tools_install()
+{
+	eval "cd tools/src/sdc_config" $REDIRECT
+	if [ $? != 0 ]; then
+		return 1
+	fi
+
+	eval "make clean" $REDIRECT
+	eval "make" $REDIRECT
+	if [ $? != 0 ]; then
+		return 2
+	fi
+
+	eval "sudo make install" $REDIRECT
+	if [ $? != 0 ]; then
+		return 3
+	fi
+
+	cd ../../..
+
+	eval "cd tools/src/sdc_uart_cfg" $REDIRECT
+	if [ $? != 0 ]; then
+		return 4
+	fi
+
+	eval "make clean" $REDIRECT
+	eval "make" $REDIRECT
+	if [ $? != 0 ]; then
+		return 5
+	fi
+
+	eval "sudo make install" $REDIRECT
+	if [ $? != 0 ]; then
+		return 6
+	fi
+
+	cd ../../..
+
+	return 0
+}
+
+function process_tools_uninstall()
+{
+	eval "cd tools/src/sdc_config" $REDIRECT
+	if [ $? != 0 ]; then
+		return 1
+	fi
+
+	eval "make clean" $REDIRECT
+	if [ $? != 0 ]; then
+		return 2
+	fi
+
+	eval "sudo make uninstall" $REDIRECT
+	if [ $? != 0 ]; then
+		return 3
+	fi
+
+	cd ../../..
+
+	eval "cd tools/src/sdc_uart_cfg" $REDIRECT
+	if [ $? != 0 ]; then
+		return 4
+	fi
+
+	eval "make clean" $REDIRECT
+	if [ $? != 0 ]; then
+		return 5
+	fi
+
+	eval "sudo make uninstall" $REDIRECT
+	if [ $? != 0 ]; then
+		return 6
+	fi
+
+	cd ../../..
+
+	return 0
+}
+
+function process_library_install()
+{
+	eval "cd lib/src" $REDIRECT
+	if [ $? != 0 ]; then
+		return 1
+	fi
+
+	eval "make clean" $REDIRECT
+	eval "make" $REDIRECT
+	if [ $? != 0 ]; then
+		return 2
+	fi
+
+	eval "sudo make install" $REDIRECT
+	if [ $? != 0 ]; then
+		return 3
+	fi
+
+	cd ../..
+
+	return 0
+}
+
+function process_library_uninstall()
+{
+	eval "cd lib/src" $REDIRECT
+	if [ $? != 0 ]; then
+		return 1
+	fi
+
+	eval "make clean" $REDIRECT
+	if [ $? != 0 ]; then
+		return 2
+	fi
+
+	eval "sudo make uninstall" $REDIRECT
+	if [ $? != 0 ]; then
+		return 3
+	fi
+
+	cd ../..
+
+	return 0
+}
+
+function process_configscript_install()
+{
+	eval "cd script/RHEL" $REDIRECT
+	if [ $? != 0 ]; then
+		return 1
+	fi
+
+	eval "sudo cp sdc-start.sh /usr/local/bin/" $REDIRECT
+	if [ $? != 0 ]; then
+		return 2
+	fi
+
+	eval "sudo cp sdc-stop.sh /usr/local/bin/" $REDIRECT
+	if [ $? != 0 ]; then
+		return 3
+	fi
+
+	eval "sudo cp sdc-board-cfg.service /etc/systemd/system/" $REDIRECT
+	if [ $? != 0 ]; then
+		return 4
+	fi
+
+	eval "sudo systemctl enable sdc-board-cfg" $REDIRECT
+	if [ $? != 0 ]; then
+		return 5
+	fi
+
+	eval "sudo systemctl start sdc-board-cfg" $REDIRECT
+	if [ $? != 0 ]; then
+		return 6
+	fi
+
+	sleep 1
+
+	eval "sudo sdc-uart-cfg -s" $REDIRECT
+	if [ $? != 0 ]; then
+		return 7
+	fi
+
+	cd ../..
+
+	return 0
+}
+
+function process_configscript_uninstall()
+{
+	eval "sudo systemctl stop sdc-board-cfg" $REDIRECT
+
+	eval "sudo systemctl disable sdc-board-cfg" $REDIRECT
+
+	eval "sudo rm /usr/local/bin/sdc-start.sh" $REDIRECT
+
+	eval "sudo rm /usr/local/bin/sdc-stop.sh" $REDIRECT
+
+	eval "sudo rm /etc/systemd/system/sdc-board-cfg.service" $REDIRECT
+
+	eval "sudo rm -Rf /usr/share/sdc_8250/" $REDIRECT
+
+	return 0
+}
+
+function process_module_unload()
+{
+	eval "sudo rmmod can_sdc" $REDIRECT
+	eval "sudo rmmod sdc_mcp251xfd" $REDIRECT
+	eval "sudo rmmod sdc_mcp251x" $REDIRECT
+	eval "sudo rmmod spi_sdc" $REDIRECT
+	eval "sudo rmmod sdc_dio" $REDIRECT
+	eval "sudo rmmod 8250_sdc" $REDIRECT
+	eval "sudo rmmod sdc_config" $REDIRECT
+	eval "sudo rmmod sunix_sdc" $REDIRECT
+}
+
+function do_install()
+{
+	echo "@@ Installation start"
+
+	if [ $ENABLE_DRIVER == 1 ]; then
+		echo "@@ Driver installation processing ..."
+		process_driver_install
+		val=$?
+		if [ $val != 0 ]; then
+			echo "@@ Driver installation fail, err:$val"
+			return 1
+		fi
+	else
+		echo "@@ Driver installation bypass"
+	fi
+
+	if [ $ENABLE_TOOLS == 1 ]; then
+		echo "@@ Tools installation processing ..."
+		process_tools_install
+		val=$?
+		if [ $val != 0 ]; then
+			echo "@@ Tools installation fail, err:$val"
+			return 2
+		fi
+	else
+		echo "@@ Tools installation bypass"
+	fi
+
+	if [ $ENABLE_LIB == 1 ]; then
+		echo "@@ Library installation processing ..."
+		process_library_install
+		val=$?
+		if [ $val != 0 ]; then
+			echo "@@ Library installation fail, err:$val"
+			return 3
+		fi
+	else
+		echo "@@ Library installation bypass"
+	fi
+
+	if [ $ENABLE_CONFIGSCRIPT == 1 ]; then
+		echo "@@ Config script installation processing ..."
+		process_configscript_install
+		val=$?
+		if [ $val != 0 ]; then
+			echo "@@ Config script installation fail, err:$val"
+			return 4
+		fi
+	else
+		echo "@@ Config script installation bypass"
+	fi
+
+	echo "@@ Installation done"
+}
+
+function do_uninstall()
+{
+	echo "@@ Uninstallation start"
+
+	echo "@@ Module unload processing ..."
+	process_module_unload
+
+	echo "@@ Driver uninstallation processing ..."
+	process_driver_uninstall
+
+	echo "@@ Tools uninstallation processing ..."
+	process_tools_uninstall
+
+	echo "@@ Library uninstallation processing ..."
+	process_library_uninstall
+
+	echo "@@ Config script uninstallation processing ..."
+	process_configscript_uninstall
+
+	echo "@@ Uninstallation done"
+}
+
+: '
+Main flow
+./SCRIPT : this is default mode, install without print info
+./SCRIPT install : install without print info
+./SCRIPT install debug : install with print info
+./SCRIPT uninstall : uninstall without print info
+./SCRIPT uninstall debug : uninstall with print info
+'
+if [[ "$1" == "uninstall" ]]; then
+	if [[ "$2" == "debug" ]]; then
+		REDIRECT=
+	else
+		REDIRECT=">& /dev/null"
+	fi
+	cd ..
+	do_uninstall
+	sleep 1
+	exit $?
+elif [[ "$1" == "install" ]]; then
+	if [[ "$2" == "debug" ]]; then
+		REDIRECT=
+	else
+		REDIRECT=">& /dev/null"
+	fi
+	cd ..
+	do_install
+	sleep 1
+	exit $?
+else
+	if [[ "$1" == "debug" ]]; then
+		REDIRECT=
+	else
+		REDIRECT=">& /dev/null"
+	fi
+	cd ..
+	do_install
+	sleep 1
+	exit $?
+fi

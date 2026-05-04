@@ -1,0 +1,195 @@
+diff -uNr old/8250_sdc.c new/8250_sdc.c
+--- old/8250_sdc.c	2025-02-17 10:49:32.000000000 +0800
++++ new/8250_sdc.c	2026-01-15 15:36:21.581129000 +0800
+@@ -86,7 +86,7 @@
+ 		pm_runtime_put_sync_suspend(p->dev);
+ }
+ 
+-#if KERNEL_VERSION(6, 0, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ static int sdc8250_rs485_config(struct uart_port *p, struct ktermios *termios,
+ 								struct serial_rs485 *rs485)
+ #else
+diff -uNr old/gpio-sdc.c new/gpio-sdc.c
+--- old/gpio-sdc.c	2025-03-14 10:35:46.432030425 +0800
++++ new/gpio-sdc.c	2025-03-14 10:48:50.999569948 +0800
+@@ -422,7 +422,7 @@
+ 	.irq_set_type = sdc_gpio_irq_set_type,
+ 	.irq_bus_lock = sdc_gpio_irq_bus_lock,
+ 	.irq_bus_sync_unlock = sdc_gpio_irq_bus_sync_unlock,
+-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 	.flags = IRQCHIP_IMMUTABLE,
+ 	GPIOCHIP_IRQ_RESOURCE_HELPERS,
+ #endif
+diff -uNr old/mcp251x/mcp251x.c new/mcp251x/mcp251x.c
+--- old/mcp251x/mcp251x.c	2025-01-20 11:05:32.000000000 +0800
++++ new/mcp251x/mcp251x.c	2026-01-15 15:43:59.200124757 +0800
+@@ -500,7 +500,7 @@
+ 	priv->net->stats.rx_packets++;
+ 	priv->net->stats.rx_bytes += frame->can_dlc;
+ 
+-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 	netif_rx(skb);
+ #else
+ 	netif_rx_ni(skb);
+@@ -728,7 +728,7 @@
+ 	if (skb) {
+ 		frame->can_id |= can_id;
+ 		frame->data[1] = data1;
+-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 		netif_rx(skb);
+ #else
+ 		netif_rx_ni(skb);
+diff -uNr old/mcp251xfd/mcp251xfd-core.c new/mcp251xfd/mcp251xfd-core.c
+--- old/mcp251xfd/mcp251xfd-core.c	2025-11-17 17:44:54.000000000 +0800
++++ new/mcp251xfd/mcp251xfd-core.c	2026-01-15 15:45:50.184911052 +0800
+@@ -1317,7 +1317,7 @@
+ 
+ 	stats->tx_bytes +=
+ 	/* Change by SUNIX */
+-#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 		can_rx_offload_get_echo_skb_queue_timestamp(&priv->offload,
+ 					    mcp251xfd_get_tef_tail(priv),
+ 					    hw_tef_obj->ts, NULL);
+@@ -1546,7 +1546,7 @@
+ 	mcp251xfd_hw_rx_obj_to_skb(priv, hw_rx_obj, skb);
+ 
+ 	/* Change by SUNIX */
+-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 	err = can_rx_offload_queue_timestamp(&priv->offload, skb, hw_rx_obj->ts);
+ #elif KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE
+ 	err = can_rx_offload_queue_sorted(&priv->offload, skb, hw_rx_obj->ts);
+@@ -1694,7 +1694,7 @@
+ 	cf->data[1] = CAN_ERR_CRTL_RX_OVERFLOW;
+ 
+ 	/* Change by SUNIX */
+-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 	err = can_rx_offload_queue_timestamp(&priv->offload, skb, timestamp);
+ #elif KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE
+ 	err = can_rx_offload_queue_sorted(&priv->offload, skb, timestamp);
+@@ -1805,7 +1805,7 @@
+ 		return 0;
+ 
+ 	/* Change by SUNIX */
+-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 	err = can_rx_offload_queue_timestamp(&priv->offload, skb, timestamp);
+ #elif KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE
+ 	err = can_rx_offload_queue_sorted(&priv->offload, skb, timestamp);
+@@ -1887,7 +1887,7 @@
+ 	}
+ 
+ 	/* Change by SUNIX */
+-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 	err = can_rx_offload_queue_timestamp(&priv->offload, skb, timestamp);
+ #elif KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE
+ 	err = can_rx_offload_queue_sorted(&priv->offload, skb, timestamp);
+diff -uNr old/sdccanfd/sdc_canfd.c new/sdccanfd/sdc_canfd.c
+--- old/sdccanfd/sdc_canfd.c	2025-11-17 17:48:45.000000000 +0800
++++ new/sdccanfd/sdc_canfd.c	2026-01-15 15:52:22.785613449 +0800
+@@ -1148,9 +1148,9 @@
+ 	}
+ 
+ 	/* can rx offload queue work */
+-#if (KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE)
++#if (KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE)
+ 	err = can_rx_offload_queue_timestamp(&priv->offload, skb, timestamp);
+-#elif ((KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(5, 19, 0) > LINUX_VERSION_CODE))
++#elif ((KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(5, 14, 0) > LINUX_VERSION_CODE))
+ 	err = can_rx_offload_queue_sorted(&priv->offload, skb, timestamp);
+ #elif ((KERNEL_VERSION(4, 14, 85) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(4, 20, 0) > LINUX_VERSION_CODE))
+ 	// ANDYJ
+@@ -1221,9 +1221,9 @@
+ 	cf->data[1] = error_status;
+ 
+ 	/* can rx offload queue work */
+-#if (KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE)
++#if (KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE)
+ 	err = can_rx_offload_queue_timestamp(&priv->offload, skb, timestamp);
+-#elif ((KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(5, 19, 0) > LINUX_VERSION_CODE))
++#elif ((KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(5, 14, 0) > LINUX_VERSION_CODE))
+ 	err = can_rx_offload_queue_sorted(&priv->offload, skb, timestamp);
+ #elif ((KERNEL_VERSION(4, 14, 85) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(4, 20, 0) > LINUX_VERSION_CODE))
+ 	// ANDYJ
+@@ -1358,9 +1358,9 @@
+ 	}
+ 
+ 	/* can rx offload queue work */
+-#if (KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE)
++#if (KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE)
+ 	err = can_rx_offload_queue_timestamp(&priv->offload, skb, timestamp);
+-#elif ((KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(5, 19, 0) > LINUX_VERSION_CODE))
++#elif ((KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(5, 14, 0) > LINUX_VERSION_CODE))
+ 	err = can_rx_offload_queue_sorted(&priv->offload, skb, timestamp);
+ #elif ((KERNEL_VERSION(4, 14, 85) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(4, 20, 0) > LINUX_VERSION_CODE))
+ 	// ANDYJ
+@@ -1466,7 +1466,7 @@
+ 		stats->tx_bytes +=
+ 		/* can rx offload queue work */
+ 		// Added by Frank, 2024/06/06, add define
+-#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 		can_rx_offload_get_echo_skb_queue_timestamp(
+ 						&priv->offload,
+ 					    tx_tail_pos,
+@@ -1799,9 +1799,9 @@
+ 
+ 
+ 	/* can rx offload queue work */
+-#if (KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE)
++#if (KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE)
+ 	err = can_rx_offload_queue_timestamp(&priv->offload, skb, rx_obj->ts);
+-#elif ((KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(5, 19, 0) > LINUX_VERSION_CODE))
++#elif ((KERNEL_VERSION(4, 20, 0) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(5, 14, 0) > LINUX_VERSION_CODE))
+ 	err = can_rx_offload_queue_sorted(&priv->offload, skb, rx_obj->ts);
+ #elif ((KERNEL_VERSION(4, 14, 85) <= LINUX_VERSION_CODE) && (KERNEL_VERSION(4, 20, 0) > LINUX_VERSION_CODE))
+ 	// ANDYJ
+diff -uNr old/sdc_config.c new/sdc_config.c
+--- old/sdc_config.c	2025-11-17 17:29:47.000000000 +0800
++++ new/sdc_config.c	2026-01-15 15:34:47.367159000 +0800
+@@ -546,7 +546,7 @@
+ }
+ #endif
+ 
+-#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ static int sdc_config_uevent(const struct device *dev, struct kobj_uevent_env *env)
+ #else
+ static int sdc_config_uevent(struct device *dev, struct kobj_uevent_env *env)
+@@ -717,7 +717,7 @@
+ 		pr_warn("failed to create driver proc entry\n");
+ #endif
+ 
+-#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 	dev_class = class_create(DRV_NAME);
+ #else
+ 	dev_class = class_create(THIS_MODULE, DRV_NAME);
+diff -uNr old/sdc_dio.c new/sdc_dio.c
+--- old/sdc_dio.c	2025-11-17 17:31:05.000000000 +0800
++++ new/sdc_dio.c	2026-01-15 15:42:39.579995462 +0800
+@@ -977,7 +977,7 @@
+ }
+ #endif
+ 
+-#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ static int sdc_dio_uevent(const struct device *dev, struct kobj_uevent_env *env)
+ #else
+ static int sdc_dio_uevent(struct device *dev, struct kobj_uevent_env *env)
+@@ -1174,7 +1174,7 @@
+ 		pr_warn("failed to create driver proc entry\n");
+ #endif
+ 
+-#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
++#if KERNEL_VERSION(5, 14, 0) <= LINUX_VERSION_CODE
+ 	dev_class = class_create(DRV_NAME);
+ #else
+ 	dev_class = class_create(THIS_MODULE, DRV_NAME);

@@ -1,0 +1,1 @@
+cmd_/home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/can_sdc.mod := { echo  /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/sdccanfd/sdc_canfd.o;  echo; } > /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/can_sdc.mod

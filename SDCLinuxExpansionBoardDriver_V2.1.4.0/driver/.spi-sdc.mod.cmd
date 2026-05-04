@@ -1,0 +1,1 @@
+cmd_/home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/spi-sdc.mod := { echo  /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/spi-sdc.o;  echo; } > /home/nvidia/canfd/SDCLinuxExpansionBoardDriver_V2.1.4.0/driver/spi-sdc.mod

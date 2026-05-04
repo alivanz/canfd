@@ -1,0 +1,33 @@
+========================================================================
+=
+=            SUNIX PCI(e) Expansion Board Library User Guide
+=
+=       Copyright 2019 - 2024 SUNIX Co., Ltd. all right reserved
+=
+========================================================================
+
+Item
+
+A. Installation
+
+   A.1	Library install
+   A.2	Library uninstall
+   A.3	Sample program
+
+========================================================================
+
+A. Installation
+
+	A.1	Library install
+		$ cd ~/temp/DRIVER_PACKAGE/lib/files/PLATFORM
+		$ sudo cp libsdc.so.X.X.X /usr/lib
+		$ sudo ldconfig
+
+	A.2	Library uninstall
+		$ sudo rm /usr/lib/libsdc.so.X.X.X
+		$ sudo ldconfig
+
+	A.3 Sample program
+		The library sample program, include source, header and Makefile.
+
+========================================================================

@@ -32,3 +32,6 @@ obj/
 PCIe_CAN_FD_docs/
 sange_sdk/
 anyfbus_driver/
+
+# PDFs inside driver packages
+**/*.pdf

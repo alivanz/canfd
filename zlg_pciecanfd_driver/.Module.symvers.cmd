@@ -1,0 +1,1 @@
+cmd_/home/nvidia/canfd/zlg_pciecanfd_driver/Module.symvers := sed 's/ko$$/o/' /home/nvidia/canfd/zlg_pciecanfd_driver/modules.order | scripts/mod/modpost -m  -E  -o /home/nvidia/canfd/zlg_pciecanfd_driver/Module.symvers -e -i Module.symvers   -T -

@@ -1,0 +1,14 @@
+{
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle:  Google, IndentWidth: 4, ColumnLimit: 0, BreakBeforeBraces: Linux, SpacesBeforeTrailingComments: 3,  AlignConsecutiveMacros: true  }",
+    "C_Cpp.clang_format_style": "{ BasedOnStyle:  Google, IndentWidth: 4, ColumnLimit: 0, BreakBeforeBraces: Linux, SpacesBeforeTrailingComments: 3,  AlignConsecutiveMacros: true  }",
+    "files.associations": {
+        "typeinfo": "c"
+    },
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/test/SDCLinuxCanFdExpansionBoardDriver_V1.0.0.0_20221116/Sample_Code/C/SocketCAN_test",
+            "binaryPath": "/home/test/SDCLinuxCanFdExpansionBoardDriver_V1.0.0.0_20221116/Sample_Code/C/SocketCAN_test/socketcan_test",
+            "binaryArgs": []
+        }
+    ]
+}

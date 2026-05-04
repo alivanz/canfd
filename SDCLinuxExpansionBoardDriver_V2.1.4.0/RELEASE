@@ -1,0 +1,79 @@
+========================================================================
+=
+=              SUNIX PCI(e) Expansion Board Driver Package
+=
+=           Copyright 2025 SUNIX Co., Ltd. all right reserved
+=
+========================================================================
+
+2026/03/26 - Ver:2.1.4.0
+	1) Support kernel 6.17.x
+	
+2026/02/10 - Ver:2.1.3.0
+	1) Add RHEL 9.7 support
+	2) Update GPIO functions
+	
+2025/11/17 - Ver:2.1.2.0
+	1) Support kernel 6.14.x
+	
+2025/03/14 - Ver:2.1.1.0
+	1) Add linux gpio subsystem support for DIO controller
+	2) Support kernel 6.11.x
+
+2025/02/14 - Ver:2.1.0.0
+	1) Add installation script for Rocky9.4 and Rocky9.5
+
+2025/01/20 - Ver:2.1.0.0
+	1) Add licence description
+	2) Add tools and library source code
+
+2024/11/07 - Ver:2.1.0.0
+	1) Add RHEL 9.4 support
+
+2024/08/02 - Ver:2.1.0.0
+	1) Support SUNIX CAN controller
+	2) Change DIO driver IOCTL interface
+	3) Update sdc-config to version 2.1.0.0
+	4) Update sdc-uart-cfg to version 2.1.0.0
+	5) Update library to version 2.0.0
+
+2024/06/11 - Ver:2.0.2.0
+	1) Support kernel 6.x
+	2) Change script name to sdc-board-cfg.sh
+
+2022/01/20 - Ver:2.0.1.0
+	1) Support kernel 4.x and 5.x
+	2) sdc-config support firmware update and store DIO setting
+
+2021/12/24 - Ver:2.0.0.0
+	1) Change driver framework to meet kernel tree
+	2) Change UART device node to ttyS
+	3) Change tool name (sdc-config, sdc-uart-cfg)
+	4) Support CAN interface
+	5) Test with kernel 5.0.0 and 5.4.0
+
+2021/08/10 - Ver:1.0.5.0
+	1) Add UART suspend and resume support
+	2) Change UART debugfs dir name
+
+2021/07/29 - Ver:1.0.4.0
+	1) Add sdc-config-o/sdc-uart-cfg-o programs for controlling
+	RS485 settings. 
+
+2021/02/24 - Ver:1.0.2.0
+	1) Fix Makefile for support kernel 5.4.x
+
+2021/02/19 - Ver:1.0.1.0
+	1) Support kernel up to 5.8
+
+2019/09/30 - Ver:1.0.0.1
+	1) Support kernel 4.x and 5.x
+
+2019/09/06 - Ver:1.0.0.0
+	1) Support SPI
+
+2019/09/05 - Ver:0.0.0.2
+	1) Support DIO
+
+2019/08/08 - Ver:0.0.0.1
+	1) Beta version release

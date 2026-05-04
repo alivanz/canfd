@@ -1,0 +1,151 @@
+========================================================================
+=
+=    SUNIX PCI(e) Expansion Board Tools & Script Installation Guide
+=
+=       Copyright 2025 SUNIX Co., Ltd. all right reserved
+=
+========================================================================
+
+Item
+
+A. Installation
+
+   A.1	Tools install
+   A.2	Tools uninstall
+   A.3	Script install
+   A.4	Script uninstall
+
+B. sdc-uart-cfg
+
+C. sdc-config
+
+========================================================================
+
+A. Installation
+
+	A.1	Tools install
+		$ cd ~/temp/DRIVER_PACKAGE/tools/PLATFORM
+		$ sudo cp * /usr/sbin
+
+	A.2	Tools uninstall
+		$ sudo rm /usr/sbin/sdc-config
+		$ sudo rm /usr/sbin/sdc-uart-cfg
+
+	A.3 Script install
+		Please finish driver installation describe in README_Driver file
+		(need apply patch RHEL_x.x.patch) and A.1 Tools install section
+		before doing instruction below.
+
+		$ cd ~/temp/DRIVER_PACKAGE/script/RHEL
+		$ sudo cp sdc-start.sh /usr/local/bin/
+		$ sudo cp sdc-stop.sh /usr/local/bin/
+		$ sudo cp sdc-board-cfg.service /etc/systemd/system/
+		$ sudo systemctl enable sdc-board-cfg
+		$ sudo systemctl start sdc-board-cfg
+		$ sudo sdc-uart-cfg -s
+
+	A.4 Script uninstall
+		Please finish driver uninstallation describe in README_Driver file
+		and A.2 Tools uninstall section before doing instruction below.
+
+		$ sudo systemctl stop sdc-board-cfg
+		$ sudo systemctl disable sdc-board-cfg
+		$ sudo rm /usr/local/bin/sdc-start.sh
+		$ sudo rm /usr/local/bin/sdc-stop.sh
+		$ sudo rm /etc/systemd/system/sdc-board-cfg.service
+		$ sudo rm -Rf /usr/share/sdc_8250/
+		$ reboot
+
+========================================================================
+
+B. sdc-uart-cfg
+
+	Save and restore serial port mode setting program.
+
+========================================================================
+
+C. sdc-config
+
+	Display SDC board information, serial port mode setting and firmware
+	update function.
+
+	Display all SDC board info
+		$ sdc-config -d
+			ID0: model=SDC0880I, firmware=1.9, pci_bus=1, irq=16
+			ID1: model=SDC4441LL, firmware=1.9, pci_bus=6, irq=19
+
+	Display detail info
+		$ sdc-config -D 1
+			ID1: model=SDC4441LL, firmware=1.9, pci_bus=6, irq=19
+				CONFIG(0):
+					ver=x00, pid=3, /dev=sdc_config1
+					brand=0, model=0
+				UART(1):
+					ver=x00, pid=4, /dev=ttyS4
+					fifo=128, cap=rs232
+				UART(2):
+					ver=x00, pid=5, /dev=ttyS5
+					fifo=128, cap=rs232
+				UART(3):
+					ver=x00, pid=6, /dev=ttyS6
+					fifo=128, cap=rs422|rs485
+				UART(4):
+					ver=x00, pid=7, /dev=ttyS7
+					fifo=128, cap=rs422|rs485
+				DIO(5):
+					ver=x00, pid=8, /dev=sdc_dio1
+					cap=x03, nr_bank=2
+						B0: nr_io=4, cap=input
+						B1: nr_io=4, cap=output
+				SPI(6):
+					ver=x01, pid=9
+					nr_device=1
+						D0: type=3, nr_gpio=1;1, name=MCP25625, dev=can0
+
+	Get serial port mode
+		$ sudo sdc-config -S ttyS6 get
+			ttyS6 config=rs485
+
+	Set serial port mode 
+		$ sudo sdc-config -S ttyS6 set rs422 term
+			Set ttyS6 config success
+
+	Update SDC firmware
+		$ sdc-config -U 1 /home/test/SDC4441LL_v1_005.rom
+			Erase 10 percent
+			Erase 20 percent
+			Erase 30 percent
+			Erase 40 percent
+			Erase 50 percent
+			Erase 60 percent
+			Erase 70 percent
+			Erase 80 percent
+			Erase 90 percent
+			Erase ok
+
+			Update 10 percent
+			Update 20 percent
+			Update 30 percent
+			Update 40 percent
+			Update 50 percent
+			Update 60 percent
+			Update 70 percent
+			Update 80 percent
+			Update 90 percent
+			Update ok
+
+			Confirm 10 percent
+			Confirm 20 percent
+			Confirm 30 percent
+			Confirm 40 percent
+			Confirm 50 percent
+			Confirm 60 percent
+			Confirm 70 percent
+			Confirm 80 percent
+			Confirm 90 percent
+			Confirm ok
+
+			Update firmware ok
+			Please shutdown system and power up
+
+========================================================================

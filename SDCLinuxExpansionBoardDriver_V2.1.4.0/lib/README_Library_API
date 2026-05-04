@@ -1,0 +1,737 @@
+========================================================================
+=
+=               SUNIX PCI(e) Expansion Board Library API
+=
+=           Copyright 2025 SUNIX Co., Ltd. all right reserved
+=
+========================================================================
+
+Item
+
+   A	DIO function
+   Z	Return code define
+
+========================================================================
+
+A. DIO function
+
+	sdc_dio_open
+
+		# Syntax:
+			int sdc_dio_open(
+				_IN_ int line
+				);
+
+		# Parameter:
+			line: Line number.
+
+		# Description:
+			Open an controller (/dev/sdc_dio#).
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_close
+
+		# Syntax:
+			int sdc_dio_close(
+				_IN_ int line
+				);
+
+		# Parameter:
+			line: Line number.
+
+		# Description:
+			Close an controller (/dev/sdc_dio#).
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_info
+
+		# Syntax:
+			int sdc_dio_get_info(
+				_IN_ int line,
+				_OUT_ struct sdc_dio_info *info
+				);
+
+		# Parameter:
+			line: Line number.
+			info: Information.
+
+		# Description:
+			Get controller information.
+
+			In struct sdc_dio_bank_info {...}
+				nr_port: Number of I/O port in this bank.
+				cap_input: Bank input capability (0->NO, 1->YES).
+				cap_output: Bank output capability (0->NO, 1->YES).
+				cap_rising_trigger: Bank input event rising trigger
+					capability (0->NO, 1->YES).
+				cap_falling_trigger: Bank input event falling trigger
+					capability (0->NO, 1->YES).
+
+			In struct sdc_dio_info {...}
+				pci_bus: PCI bus number.
+				irq: IRQ number.
+				line: Controller line number (/dev/sdc_dio#).
+				index: SDC controller index number.
+				version: Controller version.
+				cap_samedirection: Bank share same direction capability
+					(0->NO, 1->YES).
+				cap_storeflash: Store output initial value into FLASH
+					capability (0->NO, 1->YES).
+				nr_bank: Number of bank in this controller.
+				di_sampling_freq: DI sampling frequency (HZ).
+				di_filter_lower_bound_ms: DI sampling lower bound value
+					(milliseconds).
+				di_filter_min_ms: DI sampling min value (milliseconds).
+				di_filter_max_ms: DI sampling max value (milliseconds).
+				banks: struct sdc_dio_bank_info
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_direction
+
+		# Syntax:
+			int sdc_dio_get_bank_direction(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: Direction.
+
+		# Description:
+			Get direction.
+
+			Each bit of value present each BANK I/O port, 0 is input,
+			1 is output.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_direction
+
+		# Syntax:
+			int sdc_dio_set_bank_direction(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: Direction.
+
+		# Description:
+			Set direction.
+
+			Each bit of value present each BANK I/O port, 0 is input,
+			1 is output.
+
+			When cap_samedirection is 1 means this BANK I/O ports are all
+			input only or output only, the BANK direction can't mix
+			input and output direction.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_state
+
+		# Syntax:
+			int sdc_dio_get_bank_state(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Get state.
+
+			Each bit of value present each BANK I/O port, 0 is low,
+			1 is high.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_state
+
+		# Syntax:
+			int sdc_dio_set_bank_state(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Set state.
+
+			Each bit of value present each BANK I/O port, 0 is low,
+			1 is high.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_input_invert
+
+		# Syntax:
+			int sdc_dio_get_bank_input_invert(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Get input invert.
+
+			Each bit of value present each BANK I/O port, 0 is disable,
+			1 is enable.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_input_invert
+
+		# Syntax:
+			int sdc_dio_set_bank_input_invert(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Set input invert.
+
+			Each bit of value present each BANK I/O port, 0 is disable,
+			1 is enable.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_input_latch_positive_edge
+
+		# Syntax:
+			int sdc_dio_get_bank_input_latch_positive_edge(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Get input latch positive edge (low to high).
+
+			Each bit of value present each BANK I/O port, 0 is not change,
+			1 is change.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_input_latch_positive_edge
+
+		# Syntax:
+			int sdc_dio_set_bank_input_latch_positive_edge(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Set input latch positive edge (reset the change).
+
+			Each bit of value present each BANK I/O port, 0 is not reset,
+			1 is reset.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_input_latch_negative_edge
+
+		# Syntax:
+			int sdc_dio_get_bank_input_latch_negative_edge(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Get input latch negative edge (high to low).
+
+			Each bit of value present each BANK I/O port, 0 is not change,
+			1 is change.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_input_latch_negative_edge
+
+		# Syntax:
+			int sdc_dio_set_bank_input_latch_negative_edge(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Set input latch negative edge (reset the change).
+
+			Each bit of value present each BANK I/O port, 0 is not reset,
+			1 is reset.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_input_counter_increment_positive_edge
+
+		# Syntax:
+			int sdc_dio_get_bank_input_counter_increment_positive_edge(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Get input counter increment positive edge (low to high).
+
+			Each bit of value present each BANK I/O port, 0 is disable,
+			1 is enable.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_input_counter_increment_positive_edge
+
+		# Syntax:
+			int sdc_dio_set_bank_input_counter_increment_positive_edge(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Set input counter increment positive edge (low to high).
+
+			Each bit of value present each BANK I/O port, 0 is disable,
+			1 is enable.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_input_counter_increment_negative_edge
+
+		# Syntax:
+			int sdc_dio_get_bank_input_counter_increment_negative_edge(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Get input counter increment negative edge (high to low).
+
+			Each bit of value present each BANK I/O port, 0 is disable,
+			1 is enable.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_input_counter_increment_negative_edge
+
+		# Syntax:
+			int sdc_dio_set_bank_input_counter_increment_negative_edge(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Set input counter increment negative edge (high to low).
+
+			Each bit of value present each BANK I/O port, 0 is disable,
+			1 is enable.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_input_event_ctrl
+
+		# Syntax:
+			int sdc_dio_get_bank_input_event_ctrl(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_OUT_ int *rising,
+				_OUT_ int *falling
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			rising: Rising event ctrl.
+			falling: Falling event ctrl
+
+		# Description:
+			Get input rising and falling event ctrl.
+
+			Each bit of value present each BANK I/O port, 0 is disable,
+			1 is enable.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_input_event_ctrl
+
+		# Syntax:
+			int sdc_dio_set_bank_input_event_ctrl(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int rising,
+				_IN_ int falling
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			rising: Rising event ctrl.
+			falling: Falling event ctrl
+
+		# Description:
+			Set input rising and falling event ctrl.
+
+			Each bit of value present each BANK I/O port, 0 is disable,
+			1 is enable.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_output_initial_value
+
+		# Syntax:
+			int sdc_dio_get_bank_output_initial_value(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Get output initial value.
+
+			Each bit of value present each BANK I/O port, 0 is low,
+			1 is high.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_output_initial_value
+
+		# Syntax:
+			int sdc_dio_set_bank_output_initial_value(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			value: State.
+
+		# Description:
+			Set output initial value.
+
+			Each bit of value present each BANK I/O port, 0 is low,
+			1 is high.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_input_counter_reset
+
+		# Syntax:
+			int sdc_dio_set_bank_input_counter_reset(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int port_idx
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			port_idx: BANK I/O port index.
+
+		# Description:
+			Reset BANK I/O port counter value.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_input_counter_value
+
+		# Syntax:
+			int sdc_dio_get_bank_input_counter_value(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int port_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			port_idx: BANK I/O port index.
+			value: Counter value.
+
+		# Description:
+			Get BANK I/O port counter value.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_get_bank_input_filter_value
+
+		# Syntax:
+			int sdc_dio_get_bank_input_filter_value(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int port_idx,
+				_OUT_ int *value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			port_idx: BANK I/O port index.
+			value: Filter value.
+
+		# Description:
+			Get BANK I/O port filter value (milliseconds).
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_set_bank_input_filter_value
+
+		# Syntax:
+			int sdc_dio_set_bank_input_filter_value(
+				_IN_ int line,
+				_IN_ int bank_idx,
+				_IN_ int port_idx,
+				_IN_ int value
+				);
+
+		# Parameter:
+			line: Line number.
+			bank_idx: BANK index.
+			port_idx: BANK I/O port index.
+			value: Filter value.
+
+		# Description:
+			Set BANK I/O port filter value (milliseconds).
+
+			Disable DI filter when value set to 0.
+
+			Enable DI filter when value between di_filter_min_ms and
+			di_filter_max_ms.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_register_event_callback
+
+		# Syntax:
+			int sdc_dio_register_event_callback(
+				_IN_ int line,
+				_IN_ sdc_dio_callback callback_ptr
+				);
+
+		# Parameter:
+			line: Line number.
+			callback_ptr: Callback function pointer.
+
+		# Description:
+			Register event callback.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+------------------------------------------------------------------------
+
+	sdc_dio_unregister_event_callback
+
+		# Syntax:
+			int sdc_dio_unregister_event_callback(
+				_IN_ int line
+				);
+
+		# Parameter:
+			line: Line number.
+
+		# Description:
+			Unregister event callback.
+
+		# Return Value:
+			On success, return 0.
+			On error, refer to return code define.
+
+========================================================================
+
+Z. Return code define
+	 0		STATUS_SUCCESS
+	-1		STATUS_INVALID_PARAMETER
+	-2		STATUS_DEVICE_BUSY
+	-3		STATUS_NO_SUCH_DEVICE
+	-4		STATUS_ALLOC_MEMORY_FAIL
+	-5		STATUS_CREATE_THREAD_FAIL
+	-6		STATUS_IOCTL_FAIL
+	-7		STATUS_CONTROLLER_VERSION_UNSUPPORT
+	-101	STATUS_DIO_BANK_NOT_FOUND
+	-102	STATUS_DIO_BANK_PORT_NOT_FOUND
+	-103	STATUS_DIO_BANK_NO_INPUT_CAP
+	-104	STATUS_DIO_BANK_NO_OUTPUT_CAP
+
+========================================================================

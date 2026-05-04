@@ -1,0 +1,1 @@
+cmd_/home/nvidia/canfd/fbus_driver/f81601a.ko := ld -r  -EL  -maarch64elf -z noexecstack   --build-id=sha1  -T scripts/module.lds -o /home/nvidia/canfd/fbus_driver/f81601a.ko /home/nvidia/canfd/fbus_driver/f81601a.o /home/nvidia/canfd/fbus_driver/f81601a.mod.o;  true

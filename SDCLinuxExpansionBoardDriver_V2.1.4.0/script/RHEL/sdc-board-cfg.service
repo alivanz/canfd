@@ -1,0 +1,11 @@
+[Unit]
+Description=SDC board config service
+After=rc-local.service
+
+[Service]
+Restart=no
+ExecStart=/usr/local/bin/sdc-start.sh
+ExecStop=/usr/local/bin/sdc-stop.sh
+
+[Install]
+WantedBy=multi-user.target
