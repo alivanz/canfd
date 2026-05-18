@@ -20,6 +20,8 @@
 #include <errno.h>
 #include <time.h>
 #include <getopt.h>
+#include <sched.h>
+#include <sys/mman.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <linux/can.h>
@@ -87,7 +89,7 @@ static int can_open(const char *iface, int enable_fd)
                 return -1;
             }
         } else {
-            fprintf(stderr, "Interface MTU is %d, not CANFD_MTU (%d) - FD mode may not work\n",
+            fprintf(stderr, "Interface MTU is %d, not CANFD_MTU (%zu) - FD mode may not work\n",
                     ifr.ifr_mtu, CANFD_MTU);
         }
     }
@@ -123,6 +125,7 @@ static void usage(const char *prog)
         "  --len <n>      Payload length in bytes (default: 8)\n"
         "  --rate <us>    Interval between frames in microseconds (default: 0 = full speed)\n"
         "  --timestamp    Embed send timestamp in payload (min 8 bytes, for latency testing)\n"
+        "  --priority <n> SCHED_FIFO RT priority 1-99 (default: 80, 0 = disabled)\n"
         "  -h, --help     Show this help\n",
         prog);
 }
@@ -138,6 +141,7 @@ int main(int argc, char *argv[])
     uint32_t arb_id = 0x100;
     int payload_len = 8;
     int rate_us = 0;
+    int rt_priority = 80;
 
     static struct option long_opts[] = {
         {"iface",     required_argument, NULL, 'n'},
@@ -149,12 +153,13 @@ int main(int argc, char *argv[])
         {"len",       required_argument, NULL, 'l'},
         {"rate",      required_argument, NULL, 'r'},
         {"timestamp", no_argument,       NULL, 't'},
+        {"priority",  required_argument, NULL, 'P'},
         {"help",      no_argument,       NULL, 'h'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "n:fbsei:l:r:th", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "n:fbsei:l:r:tP:h", long_opts, NULL)) != -1) {
         switch (opt) {
         case 'n': iface = optarg; break;
         case 'f': use_fd = 1; break;
@@ -165,6 +170,7 @@ int main(int argc, char *argv[])
         case 'l': payload_len = atoi(optarg); break;
         case 'r': rate_us = atoi(optarg); break;
         case 't': use_timestamp = 1; break;
+        case 'P': rt_priority = atoi(optarg); break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 1;
         }
@@ -206,6 +212,19 @@ int main(int argc, char *argv[])
     if (rate_us > 0) fprintf(stderr, "           %d us/frame\n", rate_us);
     if (use_timestamp) fprintf(stderr, "Timestamp: enabled\n");
 
+    /* Lock memory to prevent page faults causing latency spikes */
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) < 0)
+        fprintf(stderr, "Warning: mlockall failed: %s\n", strerror(errno));
+
+    /* Apply SCHED_FIFO if priority > 0 */
+    if (rt_priority > 0) {
+        struct sched_param sp = { .sched_priority = rt_priority };
+        if (sched_setscheduler(0, SCHED_FIFO, &sp) < 0)
+            fprintf(stderr, "Warning: SCHED_FIFO failed (need root?): %s\n", strerror(errno));
+        else
+            fprintf(stderr, "RT:        SCHED_FIFO priority %d\n", rt_priority);
+    }
+
     g_sock = can_open(iface, use_fd);
     if (g_sock < 0)
         return 1;
@@ -220,8 +239,9 @@ int main(int argc, char *argv[])
 
     uint64_t frame_count = 0;
     uint64_t interval_frames = 0;
-    struct timespec ts_last, ts_now;
+    struct timespec ts_last, ts_now, ts_next;
     clock_gettime(CLOCK_MONOTONIC, &ts_last);
+    ts_next = ts_last;
 
     /* Build frame once — payload is static */
     struct canfd_frame fd_frame;
@@ -240,8 +260,6 @@ int main(int argc, char *argv[])
             fd_frame.data[i] = (uint8_t)i;
         frame_ptr  = &fd_frame;
         frame_size = CANFD_MTU;
-        fprintf(stderr, "DEBUG: frame_size=%zu, sizeof(canfd_frame)=%zu, flags=0x%02X\n",
-                frame_size, sizeof(fd_frame), fd_frame.flags);
     } else {
         memset(&cl_frame, 0, sizeof(cl_frame));
         cl_frame.can_id  = can_id;
@@ -284,8 +302,14 @@ int main(int argc, char *argv[])
             ts_last = ts_now;
         }
 
-        if (rate_us > 0)
-            usleep(rate_us);
+        if (rate_us > 0) {
+            ts_next.tv_nsec += rate_us * 1000;
+            if (ts_next.tv_nsec >= 1000000000L) {
+                ts_next.tv_sec++;
+                ts_next.tv_nsec -= 1000000000L;
+            }
+            clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts_next, NULL);
+        }
     }
 
     fprintf(stderr, "\nShutting down... (sent %lu frames)\n",
