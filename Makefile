@@ -2,7 +2,7 @@ KVERSION ?= $(shell uname -r)
 CC       ?= gcc
 CFLAGS   := -O2 -Wall
 
-TOOLS := net_reader net_writer slcan_reader slcan_writer \
+TOOLS := net_reader net_writer net_damiao slcan_reader slcan_writer \
          sange_can sange_reader sange_writer test_single_frame
 
 .PHONY: all tools drivers clean
@@ -10,6 +10,9 @@ TOOLS := net_reader net_writer slcan_reader slcan_writer \
 all: tools drivers
 
 tools: $(TOOLS)
+
+net_damiao: net_damiao.c
+	$(CC) $(CFLAGS) -o $@ $< -lpthread
 
 %: %.c cants.h
 	$(CC) $(CFLAGS) -o $@ $<
